@@ -18,18 +18,21 @@ pub trait ArrayIterator<const N: usize>: Sized {
 
     /// Lazily mutate the contents of an array
     fn map_array<U, F: Fn(Self::Item) -> U>(self, f: F) -> Map<Self, F> {
-        Map{a: self, f}
+        Map { a: self, f }
     }
     /// Lazily combine two `ArrayIterator`s into an new one
     fn zip_array<B: ArrayIterator<N>>(self, b: B) -> Zip<Self, B> {
-        Zip{a: self, b}
+        Zip { a: self, b }
     }
 
     /// Collect the contents of this `ArrayIterator` into an array
     ///
     /// This is very similar to [`build_array`](ArrayIterator::build_array) but ignores
     /// the case that any drop handlers need to be called
-    fn collect_array(self) -> [Self::Item; N] where Self::Item: Copy {
+    fn collect_array(self) -> [Self::Item; N]
+    where
+        Self::Item: Copy,
+    {
         // Safety:
         // Self::Item is Copy, so it has no Drop impl,
         // and we will not read from array until all values are set
@@ -46,13 +49,37 @@ pub trait ArrayIterator<const N: usize>: Sized {
     /// This is very similar to [`collect_array`](ArrayIterator::collect_array) but explicitly handles the
     /// case where the function panics and items need to be dropped
     #[cfg(feature = "drop")]
-    fn build_array(self) -> [Self::Item; N] where Self::Item: Drop {
+    fn build_array(self) -> [Self::Item; N]
+    where
+        Self::Item: Drop,
+    {
         let mut builder = array_builder::ArrayBuilder::new();
         for i in 0..N {
             builder.push(self.get(i));
         }
         // Safety: we have filled all N spots, so this is safe
         unsafe { builder.build_unchecked() }
+    }
+
+    /// Separate and collect the contents of the `ArrayIterator` into two arrays
+    fn unzip_array<A, B>(self) -> ([A; N], [B; N])
+    where
+        Self: ArrayIterator<N, Item = (A, B)>,
+        A: Copy,
+        B: Copy,
+    {
+        // Safety:
+        // Self::Item is Copy, so it has no Drop impl,
+        // and we will not read from array until all values are set
+        // So this is safe
+        let mut array1: [A; N] = unsafe { core::mem::MaybeUninit::uninit().assume_init() };
+        let mut array2: [B; N] = unsafe { core::mem::MaybeUninit::uninit().assume_init() };
+        for i in 0..N {
+            let (a, b) = self.get(i);
+            array1[i] = a;
+            array2[i] = b;
+        }
+        (array1, array2)
     }
 
     /// Get a single item out of this `ArrayIterator`
@@ -117,5 +144,13 @@ mod tests {
         let b = [5, 6, 7, 8];
         let c = a.zip_array(b).map_array(|(a, b)| a + b).collect_array();
         assert_eq!(c, [6, 8, 10, 12]);
+    }
+
+    #[test]
+    fn unzip() {
+        let a = [0, 1, 2, 3];
+        let (div, rem) = a.map_array(|a| (a / 2, a % 2)).unzip_array();
+        assert_eq!(div, [0, 0, 1, 1]);
+        assert_eq!(rem, [0, 1, 0, 1]);
     }
 }
