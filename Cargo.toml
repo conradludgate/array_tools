@@ -1,6 +1,6 @@
 [package]
 name = "array_iter_tools"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Conrad Ludgate <conradludgate@gmail.com>"]
 edition = "2018"
 description = "Modify simple arrays"
@@ -11,8 +11,4 @@ keywords = ["iterator", "no_std"]
 categories = ["rust-patterns", "no-std"]
 
 [dependencies]
-array_builder = { version = "0.1.4", optional = true }
-
-[features]
-default = ["drop"]
-drop = ["array_builder"]
+array_builder = { version = "0.1.4" }

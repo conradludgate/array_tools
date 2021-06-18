@@ -9,9 +9,9 @@
 Modify simple arrays
 
 ```rust
-use array_iter_tools::ArrayIterator;
+use array_iter_tools::{ArrayIterator, IntoArrayIterator};
 let a = [1, 2, 3, 4];
 let b = [5, 6, 7, 8];
-let c = a.zip_array(b).map_array(|(a, b)| a + b).collect_array();
+let c = a.into_array_iter().zip(b).map(|(a, b)| a + b).collect();
 assert_eq!(c, [6, 8, 10, 12]);
 ```
